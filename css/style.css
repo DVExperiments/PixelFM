@@ -29,7 +29,12 @@ h2 { font: 700 1.35rem/1.2 var(--display); margin: 0 0 10px; }
 .muted { color: var(--panel-muted); }
 
 /* ------------------------------------------------ the receiver */
-.radio { margin-top: 32px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); font-size: 0.9375rem; }
+#to-city { font-weight: 600; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+#to-city::before { content: ""; width: 8px; height: 8px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+#to-city:hover { text-decoration: underline; }
+.topbar-links a { margin-left: 16px; color: var(--muted); }
+.radio { margin-top: 24px; }
 .faceplate { background: var(--screen); color: var(--panel-ink); border: 12px solid var(--bezel); border-radius: 18px; padding: 24px; }
 .dial-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .freq { margin: 0; font: 800 clamp(2.6rem, 9vw, 4.4rem)/0.9 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }

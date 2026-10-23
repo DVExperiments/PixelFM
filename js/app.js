@@ -13,8 +13,8 @@
   if (!R) { $('notice').hidden = false; $('notice').textContent = 'The station could not start. Reload the page to try again.'; return; }
   const T = new window.PixelTransmitter(R);
   let current = null, on = false;
-  const scripts = new Map();
-  const scriptFor = (item) => { if (!scripts.has(item.id)) { scripts.set(item.id, R.script(item)); if (scripts.size > 30) scripts.delete(scripts.keys().next().value); } return scripts.get(item.id); };
+  const V = window.PixelVoice;
+  const scriptFor = (item) => V.scriptFor(R, item);
 
   // ---------------------------------------------------------------- the Senate's laws, cosmetically
   (function () {
@@ -23,35 +23,8 @@
     try { const v = S.styleVars(Date.now(), matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); for (const k in v) document.documentElement.style.setProperty(k, v[k]); } catch (e) { /* default look */ }
   })();
 
-  // ---------------------------------------------------------------- the presenters' voices
-  const synth = window.speechSynthesis;
-  let voices = [];
-  function loadVoices() {
-    if (!synth) return;
-    const all = synth.getVoices().filter((v) => /^en/i.test(v.lang));
-    const pref = all.filter((v) => /en-(GB|AU|NZ|IE)/i.test(v.lang));
-    voices = (pref.length >= 2 ? pref : all).sort((a, b) => (a.name < b.name ? -1 : 1));
-  }
-  if (synth) { loadVoices(); synth.onvoiceschanged = loadVoices; }
-  function speak(item, sc) {
-    if (!synth || !$('voices').checked || !on) return;
-    synth.cancel();
-    const sentences = sc.text.match(/[^.!?]+[.!?]+[”"]?\s*/g) || [sc.text];
-    const natural = sc.words / 2.6;
-    const rate = Math.min(1.35, Math.max(0.85, sc.rate * (natural / sc.seconds > 1 ? natural / sc.seconds : 1)));
-    // joining mid-sentence: start from the sentence the presenter would have reached
-    const elapsed = (Date.now() - item.start) / 1000 * rate * 2.6;
-    let count = 0, startAt = 0;
-    sentences.forEach((s, i) => { const w = s.split(/\s+/).filter(Boolean).length; if (count <= elapsed) startAt = i; count += w; });
-    if (elapsed > count) return; // the presenter has finished
-    const voice = voices.length ? voices[sc.voice % voices.length] : null;
-    for (const s of sentences.slice(startAt)) {
-      const u = new SpeechSynthesisUtterance(s.trim());
-      if (voice) u.voice = voice;
-      u.pitch = sc.pitch; u.rate = rate; u.volume = Math.min(1, T.volume + 0.15);
-      synth.speak(u);
-    }
-  }
+  // ---------------------------------------------------------------- the presenters' voices (js/voice.js)
+  function speak(item, sc) { if ($('voices').checked && on) V.speak(item, sc, T.volume); }
 
   // ---------------------------------------------------------------- what's on now
   function showItem(item, st) {
@@ -63,7 +36,7 @@
       $('now-title').textContent = m.title;
       $('now-sub').textContent = m.artist + '. ' + m.genreName + ' in ' + m.key + ', ' + m.bpm + ' beats a minute.';
       $('caption').innerHTML = '';
-      if (synth && synth.speaking) setTimeout(() => { if (current && current.kind === 'song') synth.cancel(); }, 2500);
+      if (V.speaking()) setTimeout(() => { if (current && current.kind === 'song') V.cancel(); }, 2500);
       // write the next script while the song plays, so the presenter is ready
       const nextTalk = R.itemsBetween(item.end, item.end + 1).filter((x) => x.kind !== 'song')[0];
       if (nextTalk) setTimeout(() => scriptFor(nextTalk), 400);
@@ -145,21 +118,36 @@
   }
 
   // ---------------------------------------------------------------- controls
-  $('power').addEventListener('click', () => {
-    on = !on;
+  function setPower(v) {
+    on = v;
     $('power').setAttribute('aria-pressed', String(on));
     $('power').textContent = on ? 'Switch off' : 'Tune in';
+    V.listening(on);
     if (on) {
       T.start();
-      if (synth) { synth.cancel(); loadVoices(); }
+      V.cancel();
       if (current && current.kind !== 'song') speak(current, scriptFor(current));
-    } else { T.stop(); if (synth) synth.cancel(); }
-  });
+    } else { T.stop(); V.cancel(); }
+  }
+  $('power').addEventListener('click', () => setPower(!on));
   $('volume').addEventListener('input', (e) => T.setVolume(+e.target.value));
-  $('voices').addEventListener('change', (e) => { if (!e.target.checked && synth) synth.cancel(); else if (current && current.kind !== 'song') speak(current, scriptFor(current)); });
-  if (!synth) { $('voices').checked = false; $('voices').disabled = true; $('voices').parentElement.title = 'This browser has no speech voices; captions are shown instead.'; }
+  $('voices').addEventListener('change', (e) => { if (!e.target.checked) V.cancel(); else if (current && current.kind !== 'song') speak(current, scriptFor(current)); });
+  if (!V.available) { $('voices').checked = false; $('voices').disabled = true; $('voices').parentElement.title = 'This browser has no speech voices; captions are shown instead.'; }
 
   tick();
   setInterval(tick, 250);
   draw();
+
+  // arriving from the city while listening: carry on if the browser allows it, otherwise ask for one tap
+  if (V.listening() && R.stateAt(Date.now()).started) {
+    setPower(true);
+    setTimeout(() => {
+      if (T.ctx && T.ctx.state === 'running') return;
+      setPower(false);
+      V.listening(true);
+      $('power').textContent = 'Tap to keep listening';
+    }, 400);
+  }
+  // keep listening when going back to the city
+  $('to-city').addEventListener('click', () => V.listening(on));
 })();

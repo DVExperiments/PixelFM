@@ -31,6 +31,21 @@ Each hour: the news on the hour, then songs separated by presenter links, idents
 
 Scripts read Glacial (live positions, naps and sprints), the Weather Bureau (conditions and Isobar's forecast), the Bookmaker (the favourite), Pixel City (air, demand, blackouts), the Senate and City's latest big events, and the Daily Pixel's headlines. Requests come from the Bookmaker's regulars.
 
+## The pocket radio (for other sites)
+
+A small receiver any site can carry, as Pixel City does. It plays the same broadcast, folds away to a pill, and links to the station. Add these after the page's own scripts:
+
+```html
+<script src="https://dvexperiments.github.io/PixelFM/universe.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/audio.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/voice.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/widget.js"></script>
+```
+
+When the listener first tunes in, the widget loads any sources the host page lacks (Glacial, Weather, Senate, City, Bookmaker, Daily Pixel), so the presenters say the same words on every site. Whether it's folded is remembered across the universe; it starts folded on phones.
+
+**Moving between pages.** Listening is remembered for the browser tab. When a listener goes from the city to the station, or back, the radio starts again on the new page if the browser allows it; if not, the button reads "Tap to keep listening". Browsers stop audio when a page changes, so there's a brief gap either way.
+
 ## API (`window.PixelUniverse.radio`)
 
 | Member | Returns |
@@ -50,6 +65,8 @@ The Daily Pixel and the Museum can load this file to report the chart. Nothing e
 index.html      the receiver
 universe.js     composer, schedule and scripts, no DOM
 js/audio.js     the synthesiser and scheduler
-js/app.js       the display, the LED equalizer and the voices
+js/app.js       the display and the LED equalizer
+js/voice.js     the presenters' voices, shared with the widget
+js/widget.js    the pocket radio for other sites
 css/style.css   Glacial's variables, so Senate laws restyle the station
 ```

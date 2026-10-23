@@ -3,89 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pixel FM 88.8</title>
-<meta name="description" content="The radio station of the Pixel Universe. Generated music, live race updates and the news, on air around the clock.">
-<meta name="theme-color" content="#E6ECEE" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#10181D" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 9 9%22 shape-rendering=%22crispEdges%22%3E%3Cpath fill=%22%2314212A%22 d=%22M0 2h9v7H0z%22/%3E%3Cpath fill=%22%239BE22D%22 d=%22M1 6h1v2H1zM3 4h1v4H3zM5 5h1v3H5z%22/%3E%3Cpath fill=%22%23FF8A1F%22 d=%22M7 3h1v5H7z%22/%3E%3C/svg%3E">
+<title>Pixel City</title>
+<meta name="description" content="The hub of the Pixel Universe: a city of 83,000 pixels whose power, parks and air follow the weather and the laws of the Pixel Senate.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 9 9%22 shape-rendering=%22crispEdges%22%3E%3Cpath fill=%22%237F9BB8%22 d=%22M1 3h2v6H1z%22/%3E%3Cpath fill=%22%23C98B6B%22 d=%22M4 1h2v8H4z%22/%3E%3Cpath fill=%22%239AA3AD%22 d=%22M7 4h1v5H7z%22/%3E%3Cpath fill=%22%23FFD678%22 d=%22M4 3h1v1H4zM5 5h1v1H5z%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="city.css">
 </head>
 <body>
-<main class="wrap">
-  <section class="radio" aria-label="Pixel FM receiver">
-    <div class="faceplate">
-      <div class="dial-row">
-        <p class="freq"><span id="freq">88.8</span> <small>FM</small></p>
-        <p class="show"><span id="show-name">Pixel FM</span><br><span id="show-host" class="muted"></span></p>
-      </div>
-      <canvas id="eq" width="480" height="120" aria-hidden="true"></canvas>
-      <div class="now" aria-live="polite">
-        <p class="now-kind" id="now-kind">Off air</p>
-        <h1 id="now-title">Pixel FM</h1>
-        <p class="now-sub" id="now-sub">Music for pixels, and anyone near one.</p>
-        <div class="progress" aria-hidden="true"><span id="progress"></span></div>
-        <p class="times"><span id="elapsed">0:00</span><span id="remaining"></span></p>
-      </div>
-      <p class="caption" id="caption" aria-live="polite"></p>
-      <div class="controls">
-        <button type="button" id="power" class="power">Tune in</button>
-        <label class="vol">Volume <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8"></label>
-        <label class="voices"><input type="checkbox" id="voices" checked> Presenters’ voices</label>
-      </div>
-    </div>
-  </section>
-
-  <p class="notice" id="notice" hidden></p>
-
-  <div class="columns">
-    <section aria-labelledby="next-title">
-      <h2 id="next-title">Coming up</h2>
-      <ol class="list" id="upcoming"></ol>
-    </section>
-    <section aria-labelledby="recent-title">
-      <h2 id="recent-title">Recently played</h2>
-      <ol class="list" id="recent"></ol>
-    </section>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="#/"><span class="brand-name">Pixel City</span><span class="brand-track"><span class="brand-pixel"></span></span></a>
+    <p class="brand-tag">The hub of the Pixel Universe.</p>
+    <nav class="nav" aria-label="Sections">
+      <a href="#/" data-view="map">Map</a>
+      <a href="#/districts" data-view="districts">Districts</a>
+      <a href="#/power" data-view="power">Power</a>
+      <a href="#/port" data-view="port">Port</a>
+      <a href="#/about" data-view="about">About</a>
+      <a href="https://dvexperiments.github.io/Glacial/">Glacial</a>
+      <a href="https://dvexperiments.github.io/Senate/">Senate</a>
+      <a href="https://dvexperiments.github.io/Weather/">Weather</a>
+      <a href="https://dvexperiments.github.io/PixelFM/">Pixel FM</a>
+    </nav>
   </div>
-
-  <section aria-labelledby="chart-title">
-    <h2 id="chart-title">The Pixel FM chart</h2>
-    <p class="small">The most played songs of the last seven days.</p>
-    <div class="scroll"><table class="table" id="chart"></table></div>
-  </section>
-
-  <section aria-labelledby="new-title">
-    <h2 id="new-title">New this week</h2>
-    <p class="small">Twelve new songs arrive every Monday at 00:00 UTC. Every song is composed by the station, note by note, and played nowhere else.</p>
-    <ol class="list cols" id="new"></ol>
-  </section>
-
-  <section aria-labelledby="shows-title">
-    <h2 id="shows-title">The presenters</h2>
-    <ol class="shows" id="shows"></ol>
-  </section>
-</main>
-
-<footer class="wrap foot">
-  <p>Pixel FM is the same for everyone: tune in at the same moment as anyone else and you hear the same song at the same point. The music is composed and synthesised in your browser. The presenters speak with your browser’s own voices, so they may sound different on another device.</p>
-  <p>Part of the <a href="https://github.com/DVExperiments">Pixel Universe</a>.</p>
+</header>
+<p class="banner" id="travel" hidden style="max-width:var(--wrap);margin:12px auto 0"></p>
+<main id="main" tabindex="-1"></main>
+<footer class="foot">
+  <p>Part of the Pixel Universe. Every building was laid out once and will not move; what changes is what the Senate builds, the power, the traffic and the air.</p>
+  <p><a href="test.html">Test bench</a></p>
 </footer>
-
-<!-- upstream, all optional: the music needs none of them; the presenters read them for their scripts -->
-<script>window.PixelUniverseOptions = Object.assign(window.PixelUniverseOptions || {}, { senateSkipGlacial: true });</script>
-<script src="https://dvexperiments.github.io/Glacial/js/pixels.js"></script>
-<script src="https://dvexperiments.github.io/Glacial/js/sim.js"></script>
-<script src="https://dvexperiments.github.io/Glacial/js/league.js"></script>
+<noscript><p style="max-width:1160px;margin:0 auto;padding:0 24px">The city is computed in your browser, so it needs JavaScript.</p></noscript>
 <script src="https://dvexperiments.github.io/Weather/universe.js"></script>
 <script src="https://dvexperiments.github.io/Senate/universe.js"></script>
-<script src="https://dvexperiments.github.io/City/universe.js"></script>
-<script src="https://dvexperiments.github.io/Bookmaker/universe.js"></script>
-<script src="https://dvexperiments.github.io/DailyPixel/universe.js"></script>
 <script src="universe.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/app.js"></script>
+<script src="map.js"></script>
+<script src="city.js"></script>
+<!-- Pixel FM: a small radio in the corner, playing the same broadcast as the station -->
+<script src="https://dvexperiments.github.io/PixelFM/universe.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/audio.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/voice.js"></script>
+<script src="https://dvexperiments.github.io/PixelFM/js/widget.js"></script>
 </body>
 </html>
