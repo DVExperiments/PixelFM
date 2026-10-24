@@ -329,7 +329,12 @@
         last: last && { winner: G.PX[last.winner.id].name, name: last.kind === 'gp' ? last.name : 'Daily Crawl number ' + last.number, margin: Math.round(last.marginPx) } };
     } catch (e) { return null; }
   }
-  const spokenTime = (t) => { const d = new Date(t); const h = d.getUTCHours(), m = d.getUTCMinutes(); return (h < 10 ? 'oh ' : '') + h + (m === 0 ? ' hundred' : ' ' + (m < 10 ? 'oh ' + m : m)) + ' UTC'; };
+  // the time as the city keeps it: UTC until the Renewal, then City Standard Time
+  const spokenTime = (t) => {
+    const W = U().climate, off = W && W.offsetAt ? W.offsetAt(t) : 0;
+    const d = new Date(t + off); const h = d.getUTCHours(), m = d.getUTCMinutes();
+    return (h < 10 ? 'oh ' : '') + h + (m === 0 ? ' hundred' : ' ' + (m < 10 ? 'oh ' + m : m)) + (off ? ', city time' : ' UTC');
+  };
   const words = (s) => s.split(/\s+/).filter(Boolean).length;
   const songLine = (id) => { const s = songMeta(id); return '“' + s.title + '” by ' + s.artist; };
 
