@@ -230,6 +230,8 @@
   }
 
   // ================================================================ the catalogue and the running order
+  // Pixel City Society (City's society.js): a song that catches on around the city gets played more
+  const society = () => { const P = (typeof window !== 'undefined' ? window : globalThis).PixelUniverse; return P && P.society && P.society.songFad ? P.society : null; };
   const weekOf = (t) => Math.floor((t - OPENS) / WEEK);
   const weekSongs = (w) => { const out = []; for (let k = 0; k < (w === 0 ? LAUNCH_LIBRARY : PER_WEEK); k++) out.push('w' + w + '-' + k); return out; };
   const LENGTH = { news: 50 * SEC, link: 22 * SEC, ad: 24 * SEC, ident: 9 * SEC };
@@ -250,6 +252,17 @@
     const add = (kind, len, extra) => { items.push(Object.assign({ kind, start: t, end: t + len }, extra)); t += len; };
     add('news', LENGTH.news);
     let n = 0;
+    // a song that has caught on around the city gets asked for: once an hour at most, straight after the news.
+    // Its own seed, so the rest of the hour's running order is drawn exactly as before.
+    const fad = society() ? society().songFad(h) : null;
+    if (fad && pool.indexOf(fad.song) >= 0 && seeded('fad:' + hourKey(h))() < Math.min(0.85, fad.strength * 4)) {
+      const len = songMeta(fad.song).durationMs;
+      played[fad.song] = true;
+      add('song', len, { song: fad.song, n, requested: true });
+      add('link', LENGTH.link, { after: fad.song });
+      last = fad.song;
+      n++;
+    }
     while (true) {
       // new releases are played more; nothing twice in an hour
       let id = null;
@@ -482,7 +495,7 @@
 
   root.PixelUniverse = root.PixelUniverse || {};
   root.PixelUniverse.radio = {
-    version: VERSION, source: 'radio', startDate: new Date(OPENS).toISOString().slice(0, 10), opens: OPENS, frequency: '88.8',
+    version: VERSION, source: 'radio', startDate: new Date(OPENS).toISOString().slice(0, 10), opens: OPENS, frequency: '88.8', ready: () => !!society(),
     stateAt, eventsBetween, itemAt, itemsBetween, hour, songMeta, compose, script, chart, showAt, SHOWS, GENRES
   };
 })(typeof window !== 'undefined' ? window : globalThis);

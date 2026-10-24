@@ -22,6 +22,7 @@
   const SOURCES = [
     ['G', 'Glacial/js/pixels.js'], ['G', 'Glacial/js/sim.js'], ['G', 'Glacial/js/league.js'],
     ['climate', 'Weather/universe.js'], ['senate', 'Senate/universe.js'], ['city', 'City/universe.js'],
+    ['census', 'City/census.js'], ['commerce', 'Exchange/universe.js'], ['society', 'City/society.js'],
     ['bookmaker', 'Bookmaker/universe.js'], ['paper', 'DailyPixel/universe.js']
   ];
   const KIND = { news: 'The news', link: 'On the microphone', ad: 'Advertisements', ident: 'Pixel FM', timecheck: 'Time check', chart: 'The Pixel FM chart' };

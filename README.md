@@ -70,3 +70,7 @@ js/voice.js     the presenters' voices, shared with the widget
 js/widget.js    the pocket radio for other sites
 css/style.css   Glacial's variables, so Senate laws restyle the station
 ```
+
+## Song crazes
+
+From 1 December 2026 Pixel FM reads Pixel City Society (City's `society.js`). When a song has caught on around the city, it is requested: at most once an hour, straight after the news, more often the further the craze has spread, so it climbs the chart. The request uses its own seed, so the rest of each hour is drawn as before. Pages that load Pixel FM must also load the chain the Senate needs (see the Senate's README); the widget loads it itself.
