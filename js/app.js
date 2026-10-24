@@ -148,6 +148,6 @@
       $('power').textContent = 'Tap to keep listening';
     }, 400);
   }
-  // keep listening when going back to the city
-  $('to-city').addEventListener('click', () => V.listening(on));
+  // keep listening when going to another page of the universe
+  window.addEventListener('pagehide', () => V.listening(on));
 })();

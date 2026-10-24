@@ -64,7 +64,11 @@
 #pfm-widget.pfm-on .pfm-bars i:nth-child(2) { animation-delay: -0.3s; } #pfm-widget.pfm-on .pfm-bars i:nth-child(3) { animation-delay: -0.6s; }
 @keyframes pfm-b { from { height: 3px; } to { height: 14px; } }
 @media (prefers-reduced-motion: reduce) { #pfm-widget.pfm-on .pfm-bars i { animation: none; height: 10px; } }
-@media print { #pfm-widget { display: none; } }`;
+@media print { #pfm-widget { display: none; } }
+#pfm-widget.pfm-docked { position: static; width: auto; max-width: none; border: 0; border-radius: 0; box-shadow: none; }
+#pfm-widget.pfm-docked .pfm-head, #pfm-widget.pfm-docked .pfm-pill { display: none !important; }
+#pfm-widget.pfm-docked .pfm-body { display: block !important; padding: 16px 18px 18px; }
+#pfm-widget.pfm-docked canvas { height: 52px; }`;
   const style = document.createElement('style');
   style.textContent = css;
   document.head.appendChild(style);
@@ -82,14 +86,16 @@
   <div class="pfm-controls"><button type="button" class="pfm-power" aria-pressed="false">Tune in</button><input class="pfm-vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></div>
   <div class="pfm-foot"><label><input type="checkbox" class="pfm-voices" checked> Voices</label><a class="pfm-open" href="${STATION}">Open the station</a></div>
 </div>`;
-  document.body.appendChild(el);
+  // a page can give the radio a place of its own: <div id="pfm-dock"></div>. Docked, it is part of the page and never folds.
+  const dock = document.getElementById('pfm-dock');
+  if (dock) { el.classList.add('pfm-docked'); dock.appendChild(el); } else document.body.appendChild(el);
   const q = (s) => el.querySelector(s);
 
   // folded or open: remembered across the universe; folded by default on small screens
   let pref = null;
   try { pref = localStorage.getItem('pixelfm.widget'); } catch (e) { /* no storage */ }
-  const setFold = (min) => { el.classList.toggle('pfm-min', min); try { localStorage.setItem('pixelfm.widget', min ? 'min' : 'open'); } catch (e) { /* no storage */ } };
-  el.classList.toggle('pfm-min', pref ? pref === 'min' : matchMedia('(max-width: 600px)').matches);
+  const setFold = (min) => { if (dock) return; el.classList.toggle('pfm-min', min); try { localStorage.setItem('pixelfm.widget', min ? 'min' : 'open'); } catch (e) { /* no storage */ } };
+  el.classList.toggle('pfm-min', !dock && (pref ? pref === 'min' : matchMedia('(max-width: 600px)').matches));
   q('.pfm-pill').addEventListener('click', () => setFold(false));
   q('.pfm-fold').addEventListener('click', () => setFold(true));
   if (!V.available) { q('.pfm-voices').checked = false; q('.pfm-voices').disabled = true; }
