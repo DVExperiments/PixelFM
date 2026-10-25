@@ -21,6 +21,7 @@
     this.on = true;
     this.cursor = Date.now();
     this.joining = true;
+    this.offset = this.ctx.currentTime - Date.now() / 1000; // one steady mapping from the clock to audio time
     this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.1);
     const self = this;
     clearInterval(this.timer);
@@ -42,14 +43,15 @@
     const ctx = (this.ctx = new (window.AudioContext || window.webkitAudioContext)());
     this.master = ctx.createGain(); this.master.gain.value = 0;
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.2;
+    comp.threshold.value = -20; comp.knee.value = 8; comp.ratio.value = 2.5; comp.attack.value = 0.006; comp.release.value = 0.25; // gentle glue
     this.analyser = ctx.createAnalyser(); this.analyser.fftSize = 512; this.analyser.smoothingTimeConstant = 0.78;
-    this.music = ctx.createGain(); this.music.gain.value = 1;   // ducked under the presenters
+    this.music = ctx.createGain(); this.music.gain.value = 0.85;   // ducked under the presenters
     // a brick-wall limiter last, so nothing ever clips
     const lim = ctx.createDynamicsCompressor();
-    lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.1;
-    const trim = ctx.createGain(); trim.gain.value = 0.85;
-    this.music.connect(this.master); this.master.connect(comp); comp.connect(trim); trim.connect(lim); lim.connect(this.analyser); this.analyser.connect(ctx.destination);
+    lim.threshold.value = -2; lim.knee.value = 3; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.18; // a safety net, not a sound
+    const trim = ctx.createGain(); trim.gain.value = 0.7; // headroom, so the limiter rarely has to act
+    const soft = ctx.createBiquadFilter(); soft.type = 'highshelf'; soft.frequency.value = 5200; soft.gain.value = -4; // take the edge off square and saw tones
+    this.music.connect(this.master); this.master.connect(comp); comp.connect(trim); trim.connect(soft); soft.connect(lim); lim.connect(this.analyser); this.analyser.connect(ctx.destination);
     // reverb: a generated hall
     this.reverb = ctx.createConvolver();
     const len = ctx.sampleRate * 2.6, ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -138,26 +140,30 @@
           const lp = this.filter('lowpass', 2400), g = this.env(t, 0.07 * v, 0.003, 0.12, 0.2, dur, 0.06);
           this.osc('square', freq(m), t, t + dur + 0.1).connect(lp); lp.connect(g); this.out(g, 1, 0.2);
         } else { // pad: two detuned saws, slow in, slow out
-          const lp = this.filter('lowpass', 1300), g = this.env(t, 0.055 * v, 0.35, 0.4, 0.8, dur, 0.9);
+          const lp = this.filter('lowpass', 1200), g = this.env(t, 0.042 * v, 0.35, 0.4, 0.8, dur, 0.9);
           this.osc('sawtooth', freq(m), t, t + dur + 1.2, -9).connect(lp); this.osc('sawtooth', freq(m), t, t + dur + 1.2, 9).connect(lp);
           lp.connect(g); this.out(g, 1, 0.55);
         }
         break;
       }
       case 'arp': {
-        const lp = this.filter('lowpass', 3200), g = this.env(t, 0.06 * v, 0.002, 0.09, 0.15, dur, 0.04);
+        const lp = this.filter('lowpass', 2500), g = this.env(t, 0.05 * v, 0.003, 0.09, 0.15, dur, 0.05);
         this.osc('square', freq(m), t, t + dur + 0.1).connect(lp); lp.connect(g); this.out(g, 1, 0.15, 0.35);
         break;
       }
       case 'lead': {
         let g;
-        if (score.lead === 'keys') {
+        if (score.lead === 'glass') {
+          g = this.env(t, 0.13 * v, 0.008, 0.5, 0.4, dur, 0.35);
+          const o = this.osc('sine', freq(m), t, t + dur + 0.5), o2 = this.osc('triangle', freq(m), t, t + dur + 0.5, 7), g2 = c.createGain(); g2.gain.value = 0.3;
+          o.connect(g); o2.connect(g2); g2.connect(g); this.out(g, 1, 0.35, 0.25);
+        } else if (score.lead === 'keys') {
           g = this.env(t, 0.16 * v, 0.004, 0.6, 0.35, dur, 0.3);
           const o = this.osc('triangle', freq(m), t, t + dur + 0.5), o2 = this.osc('sine', freq(m) * 2, t, t + dur + 0.5), g2 = c.createGain(); g2.gain.value = 0.25;
           o.connect(g); o2.connect(g2); g2.connect(g); this.out(g, 1, 0.3, 0.2);
         } else {
           const saw = score.lead === 'saw';
-          const lp = this.filter('lowpass', saw ? 2400 : 3400);
+          const lp = this.filter('lowpass', saw ? 2200 : 2700);
           g = this.env(t, (saw ? 0.07 : 0.085) * v, 0.01, 0.15, 0.75, dur, 0.12);
           const o = this.osc(saw ? 'sawtooth' : 'square', freq(m), t, t + dur + 0.3);
           if (dur > 0.3) { const lfo = this.osc('sine', 5.5, t, t + dur + 0.3), d = c.createGain(); d.gain.setValueAtTime(0, t); d.gain.linearRampToValueAtTime(freq(m) * 0.006, t + 0.25); lfo.connect(d); d.connect(o.frequency); }
@@ -198,15 +204,18 @@
   Transmitter.prototype.tick = function () {
     if (!this.on) return;
     const now = Date.now();
-    const ahead = document.hidden ? 2500 : 300;
+    const ahead = document.hidden ? 2500 : 900; // further ahead, so a busy page rarely makes the band miss a beat
     const from = this.cursor, to = now + ahead;
     if (to <= from) return;
-    const base = this.ctx.currentTime, at = (w) => base + (w - now) / 1000;
+    // keep one steady mapping from the clock to audio time, so every note lands on its beat; re-sync only if they drift apart
+    const drift = this.ctx.currentTime - (now / 1000 + this.offset);
+    if (this.offset === undefined || drift > 0.08 || drift < -0.08) this.offset = this.ctx.currentTime - now / 1000;
+    const off = this.offset, at = (w) => w / 1000 + off, late = this.ctx.currentTime + 0.01;
     const joining = this.joining;
     this.joining = false;
     for (const item of this.R.itemsBetween(from, to)) {
       if (item.kind !== 'song') {
-        this.music.gain.setTargetAtTime(1, at(Math.max(item.start, from)), 0.05);
+        this.music.gain.setTargetAtTime(0.85, at(Math.max(item.start, from)), 0.05);
         this.bed(item, from, to, at);
         continue;
       }
@@ -216,7 +225,11 @@
       for (const e of score.events) {
         const w = item.start + e[0] * beatMs;
         const len = e[1] * beatMs;
-        if (w >= from && w < to) this.play(e[2], at(w), len / 1000, e[3], e[4], score);
+        if (w >= from && w < to) {
+          if (at(w) >= late) this.play(e[2], at(w), len / 1000, e[3], e[4], score);
+          else if ((e[2] === 'chord' || e[2] === 'bass') && at(w) + len / 1000 > late + 0.15) this.play(e[2], late, at(w) + len / 1000 - late, e[3], e[4] * 0.8, score); // a long note joins late
+          // anything short that would sound late is dropped, rather than played off the beat
+        }
         else if (joining && w < from && w + len > from + 200 && (e[2] === 'chord' || e[2] === 'bass')) this.play(e[2], at(from), (w + len - from) / 1000, e[3], e[4] * 0.8, score); // sustained notes already sounding
         else if (w >= to) break;
       }
@@ -230,7 +243,7 @@
 
   /** Lowers the music under the presenter's voice. */
   Transmitter.prototype.duck = function (down) {
-    if (this.ctx) this.music.gain.setTargetAtTime(down ? 0.45 : 1, this.ctx.currentTime, 0.15);
+    if (this.ctx) this.music.gain.setTargetAtTime(down ? 0.38 : 0.85, this.ctx.currentTime, 0.15);
   };
 
   window.PixelTransmitter = Transmitter;

@@ -14,10 +14,14 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
   const SEC = 1000, MIN = 60000, H = 3600000, DAY = 86400000, WEEK = 7 * DAY;
   const OPENS = Date.UTC(2026, 9, 19); // a Monday: the first twelve songs are released and the station goes on air
   const PER_WEEK = 12;
+  // From the week of 7 December 2026 the station grows: sixteen new songs a week, four new genres, new titles. Songs
+  // from earlier weeks are exactly as they were.
+  const GROW_WEEK = 7, PER_WEEK_GROWN = 16;
+  const perWeek = (w) => (w === 0 ? LAUNCH_LIBRARY : w >= GROW_WEEK ? PER_WEEK_GROWN : PER_WEEK);
   const LAUNCH_LIBRARY = 40; // the station opens with a back catalogue
   const ROTATION_WEEKS = 6;
 
@@ -61,7 +65,10 @@
     boom: { k: 'x.........x..o..', s: '....x.......x...', h: 'x.x.x.x.x.x.x.xo' },
     four: { k: 'x...x...x...x...', s: '....x.......x...', h: '..x...x...x...x.' },
     funk: { k: 'x..x..x...x.....', s: '....x..o.o..x..o', h: 'xoxoxoxoxoxoxoxo' },
-    none: { k: '................', s: '................', h: '................' }
+    none: { k: '................', s: '................', h: '................' },
+    bossa: { k: 'x..x..x.x..x..x.', s: '...o..o...o..o..', h: 'x.x.x.x.x.x.x.x.' },
+    house: { k: 'x...x...x...x...', s: '....x.......x...', h: '..x...x...x...xo' },
+    dub: { k: 'x.........x.....', s: '........x.......', h: '..o...o...o...o.' }
   };
   const GENRES = {
     chip: { name: 'Chip pop', bpm: [112, 126], modes: ['major', 'mixolydian'], mood: 'bright', lead: 'square', bass: 'pulse', bassPattern: 'eighths', chords: 'arp', drums: 'pop', swing: 0, sevenths: false },
@@ -70,7 +77,15 @@
     ambient: { name: 'Glacier ambient', bpm: [64, 72], modes: ['lydian', 'major'], mood: 'bright', lead: 'bell', bass: 'sine', bassPattern: 'whole', chords: 'pad', drums: 'none', swing: 0, sevenths: true },
     funk: { name: 'Dither funk', bpm: [100, 110], modes: ['dorian', 'mixolydian'], mood: 'any', lead: 'square', bass: 'pluck', bassPattern: 'funk', chords: 'stab', drums: 'funk', swing: 0.08, sevenths: true }
   };
-  const GENRE_KEYS = Object.keys(GENRES);
+  // the newer genres, for songs from the week of 7 December 2026
+  const NEW_GENRES = {
+    house: { name: 'Refresh house', bpm: [118, 124], modes: ['minor', 'dorian'], mood: 'dark', lead: 'glass', bass: 'pluck', bassPattern: 'offbeat', chords: 'stab', drums: 'house', swing: 0, sevenths: true },
+    bossa: { name: 'Bezel bossa', bpm: [84, 92], modes: ['major', 'lydian'], mood: 'bright', lead: 'keys', bass: 'sine', bassPattern: 'bossa', chords: 'keys', drums: 'bossa', swing: 0, sevenths: true },
+    dub: { name: 'Scanline dub', bpm: [70, 78], modes: ['minor', 'dorian'], mood: 'dark', lead: 'bell', bass: 'sine', bassPattern: 'roots', chords: 'stab', drums: 'dub', swing: 0.1, sevenths: false },
+    dream: { name: 'Phosphor dream pop', bpm: [86, 96], modes: ['lydian', 'major', 'mixolydian'], mood: 'bright', lead: 'glass', bass: 'saw', bassPattern: 'eighths', chords: 'pad', drums: 'pop', swing: 0, sevenths: true }
+  };
+  Object.assign(GENRES, NEW_GENRES);
+  const GENRE_KEYS = ['chip', 'lofi', 'synth', 'ambient', 'funk'], NEW_GENRE_KEYS = Object.keys(NEW_GENRES); // the original five, in their original order
   const FORMS = {
     standard: [['intro', 4], ['verse', 8], ['chorus', 8], ['verse', 8], ['chorus', 8], ['bridge', 8], ['chorus', 8], ['outro', 4]],
     short: [['intro', 4], ['verse', 8], ['chorus', 8], ['verse', 8], ['chorus', 8], ['outro', 4]],
@@ -86,13 +101,17 @@
   const TITLE_WHOLE = ['Napping at Ninety Percent', 'One Pixel Ahead', 'Twenty-Two Hours', 'Waiting for the Kick', 'Smog Day Blues', 'Photo Finish', 'The Long Way Round', 'Wake Me at the Line',
     'Under the Floodlights', 'Southerly Change', 'Do Not Rush Me', 'Blackout Rota', 'Coal Carrier', 'Half a Pixel', 'Back of the Grid', 'Stuck on Bright', 'Isobar', 'The Stipend Arrives', 'Dimmer Switch', 'Rating 1500'];
 
+  const NEW_TITLES = ['Charge Bar at Closing', 'The Palette Shop Girl', 'Rent Is Falling in Jaggy', 'Graduation Day', 'Overdraft Waltz', 'Shelves on Thursday', 'Null Indigo', 'Texture Foundry Nights',
+    'Freight at Dawn', 'Held Outside the Harbour', 'Glitch in Burn-In', 'The Rate Holds', 'Moving to Lossless', 'Senior Dispatch Clerk', 'Patch Me Up', 'Margin Pilot', 'Colour Growth', 'The Export Dock', 'No Signal', 'Stuck Frame Romance'];
   const metaCache = new Map(), songCache = new Map();
 
   /** A song's identity and length, cheap to compute. id: "w<week>-<n>". */
   function songMeta(id) {
     if (metaCache.has(id)) return metaCache.get(id);
-    const r = seeded('song:' + id);
-    const gk = GENRE_KEYS[Math.floor(r() * GENRE_KEYS.length)];
+    const r = seeded('song:' + id), week = +id.slice(1, id.indexOf('-'));
+    let gk = GENRE_KEYS[Math.floor(r() * GENRE_KEYS.length)];
+    const rg = week >= GROW_WEEK ? seeded('song2:' + id) : null; // its own seed: nothing else about the song is drawn differently
+    if (rg && rg() < 0.45) gk = NEW_GENRE_KEYS[Math.floor(rg() * NEW_GENRE_KEYS.length)];
     const g = GENRES[gk];
     const bpm = between(r, g.bpm[0], g.bpm[1]);
     let mode = pick(r, g.modes);
@@ -103,7 +122,8 @@
     for (const s of FORMS[formName]) bars += s[1];
     const starAct = r() < 0.45;
     const artist = starAct ? pick(r, STAR_ACTS) : pick(r, BANDS);
-    const title = r() < 0.4 ? pick(r, TITLE_WHOLE) : pick(r, TITLE_A) + ' ' + pick(r, TITLE_B);
+    let title = r() < 0.4 ? pick(r, TITLE_WHOLE) : pick(r, TITLE_A) + ' ' + pick(r, TITLE_B);
+    if (rg && rg() < 0.35) title = pick(rg, NEW_TITLES);
     const durationMs = Math.floor((bars * 4 * 60000) / bpm) + 2 * SEC; // two seconds of ring-out
     const m = { id, title, artist, genre: gk, genreName: g.name, bpm, mode, root, key: NOTE_NAMES[root % 12] + ' ' + mode, form: formName, bars, durationMs, week: +id.slice(1, id.indexOf('-')) };
     metaCache.set(id, m);
@@ -180,6 +200,8 @@
           else if (pat === 'roots') { ev.push([beat0, 1.5, 'bass', root, 0.8]); ev.push([beat0 + 2.5, 1, 'bass', root, 0.6]); ev.push([beat0 + 3.5, 0.5, 'bass', fifth, 0.5]); }
           else if (pat === 'eighths') for (let e = 0; e < 8; e++) ev.push([beat0 + e / 2, 0.45, 'bass', e === 6 ? fifth : e % 4 === 3 ? root + 12 : root, e % 2 ? 0.55 : 0.8]);
           else if (pat === 'drive') for (let e = 0; e < 8; e++) ev.push([beat0 + e / 2, 0.4, 'bass', root + (e % 2 ? 12 : 0), e % 2 ? 0.5 : 0.75]);
+          else if (pat === 'offbeat') for (let e = 0; e < 4; e++) ev.push([beat0 + e + 0.5, 0.4, 'bass', e === 3 ? fifth : root, 0.8]); // the house bass: on the and
+          else if (pat === 'bossa') { ev.push([beat0, 1.4, 'bass', root, 0.75]); ev.push([beat0 + 1.5, 0.5, 'bass', fifth + 12, 0.55]); ev.push([beat0 + 2, 1.4, 'bass', fifth + 12, 0.7]); ev.push([beat0 + 3.5, 0.5, 'bass', root, 0.55]); }
           else if (pat === 'funk') { const fp = [[0, 0.4, 0], [0.75, 0.25, 12], [1.5, 0.4, 0], [2.5, 0.25, 7], [3, 0.4, 10], [3.5, 0.4, 12]]; for (const [o, l, iv] of fp) ev.push([beat0 + o, l, 'bass', root + iv, 0.75]); }
         }
         // chords
@@ -233,7 +255,7 @@
   // Pixel City Society (City's society.js): a song that catches on around the city gets played more
   const society = () => { const P = (typeof window !== 'undefined' ? window : globalThis).PixelUniverse; return P && P.society && P.society.songFad ? P.society : null; };
   const weekOf = (t) => Math.floor((t - OPENS) / WEEK);
-  const weekSongs = (w) => { const out = []; for (let k = 0; k < (w === 0 ? LAUNCH_LIBRARY : PER_WEEK); k++) out.push('w' + w + '-' + k); return out; };
+  const weekSongs = (w) => { const out = []; for (let k = 0; k < perWeek(w); k++) out.push('w' + w + '-' + k); return out; };
   const LENGTH = { news: 50 * SEC, link: 22 * SEC, ad: 24 * SEC, ident: 9 * SEC };
 
   const hourCache = new Map();
@@ -482,7 +504,7 @@
       const at = OPENS + w * WEEK;
       if (at < from) continue;
       out.push({ id: 'radio:releases:w' + w, time: iso(at), source: 'radio', type: 'releases.new', importance: 1, data: { week: w, songs: weekSongs(w) },
-        headline: (w === 0 ? 'Pixel FM opens with a library of forty songs, including ' : 'Twelve new songs arrive at Pixel FM, including ') + songLine(weekSongs(w)[0]) });
+        headline: (w === 0 ? 'Pixel FM opens with a library of forty songs, including ' : (w >= GROW_WEEK ? 'Sixteen' : 'Twelve') + ' new songs arrive at Pixel FM, including ') + songLine(weekSongs(w)[0]) });
       if (w > 0) {
         const c = chart(at, 1)[0], prev = w > 1 ? chart(at - WEEK, 1)[0] : null;
         if (c) out.push({ id: 'radio:chart:w' + w, time: iso(at), source: 'radio', type: 'chart.number_one', importance: prev && prev.id === c.id ? 1 : 2, data: { song: c.id, plays: c.plays },
@@ -496,6 +518,6 @@
   root.PixelUniverse = root.PixelUniverse || {};
   root.PixelUniverse.radio = {
     version: VERSION, source: 'radio', startDate: new Date(OPENS).toISOString().slice(0, 10), opens: OPENS, frequency: '88.8', ready: () => !!society(),
-    stateAt, eventsBetween, itemAt, itemsBetween, hour, songMeta, compose, script, chart, showAt, SHOWS, GENRES
+    stateAt, eventsBetween, itemAt, itemsBetween, hour, songMeta, compose, script, chart, showAt, SHOWS, GENRES, perWeek
   };
 })(typeof window !== 'undefined' ? window : globalThis);

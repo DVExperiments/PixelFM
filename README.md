@@ -74,3 +74,11 @@ css/style.css   Glacial's variables, so Senate laws restyle the station
 ## Song crazes
 
 From 1 December 2026 Pixel FM reads Pixel City Society (City's `society.js`). When a song has caught on around the city, it is requested: at most once an hour, straight after the news, more often the further the craze has spread, so it climbs the chart. The request uses its own seed, so the rest of each hour is drawn as before. Pages that load Pixel FM must also load the chain the Senate needs (see the Senate's README); the widget loads it itself.
+
+## Sound and catalogue (version 0.2)
+
+**Cleaner sound.** The music has headroom before the compressor (gentler: soft knee, ratio 2.5), a softer limiter that is now a safety net rather than a sound, a slight treble roll-off on the master to take the edge off square and saw tones, and quieter pads and leads. Measured on the busiest passage of six songs, peaks fell from 0.87–0.91 (riding the limiter) to 0.52–0.58.
+
+**Steadier timing.** Notes are scheduled from one steady mapping between the clock and audio time (re-synced only if they drift apart by 80 ms), the scheduler looks 0.9 s ahead, and a short note that would sound late, because the page was busy, is dropped rather than played off the beat; long chords and bass notes join late instead.
+
+**More music, from the week of 7 December 2026.** Sixteen new songs a week instead of twelve; four new genres (Refresh house, Bezel bossa, Scanline dub, Phosphor dream pop) with their own drum and bass patterns and a new glass lead; and new titles from the life of the city. Each new-week song draws these from its own seed, so every song released before then is exactly as it was (checked: all 112 unchanged).
